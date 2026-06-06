@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>ระบุเหตุผล — งานค้าง Mark Complete</title>
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -22,21 +21,9 @@
       color: #fff;
       padding: 16px 20px 14px;
     }
-    .header .label {
-      font-size: 12px;
-      opacity: 0.85;
-      margin-bottom: 4px;
-    }
-    .header .branch-name {
-      font-size: 18px;
-      font-weight: bold;
-      line-height: 1.3;
-    }
-    .header .sub {
-      font-size: 12px;
-      margin-top: 4px;
-      opacity: 0.8;
-    }
+    .header .label { font-size: 12px; opacity: 0.85; margin-bottom: 4px; }
+    .header .branch-name { font-size: 18px; font-weight: bold; line-height: 1.3; }
+    .header .sub { font-size: 12px; margin-top: 4px; opacity: 0.8; }
 
     /* ─── Form ─── */
     .form-body {
@@ -54,18 +41,10 @@
       color: #333;
       margin-bottom: 8px;
     }
-    .field-group label span.req {
-      color: #E53935;
-      margin-left: 3px;
-    }
+    .field-group label span.req { color: #E53935; margin-left: 3px; }
 
     /* Reason chips */
-    .chip-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 10px;
-    }
+    .chip-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
     .chip {
       padding: 7px 14px;
       border-radius: 20px;
@@ -100,12 +79,8 @@
     textarea:focus { border-color: #E53935; }
     textarea::placeholder { color: #BDBDBD; }
 
-    /* Action chips */
-    .action-grid {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
+    /* Action items */
+    .action-grid { display: flex; flex-direction: column; gap: 8px; }
     .action-item {
       display: flex;
       align-items: center;
@@ -137,12 +112,8 @@
       background: #1565C0;
     }
 
-    /* ─── Footer button ─── */
-    .footer {
-      padding: 16px;
-      background: #fff;
-      border-top: 1px solid #eee;
-    }
+    /* ─── Footer ─── */
+    .footer { padding: 16px; background: #fff; border-top: 1px solid #eee; }
     .btn-submit {
       width: 100%;
       padding: 14px;
@@ -157,12 +128,36 @@
       transition: background .15s;
     }
     .btn-submit:active { background: #B71C1C; }
-    .btn-submit:disabled {
-      background: #BDBDBD;
-      cursor: not-allowed;
+    .btn-submit:disabled { background: #BDBDBD; cursor: not-allowed; }
+
+    /* ─── Success screen ─── */
+    .success-screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      padding: 40px 24px;
+      text-align: center;
+      gap: 16px;
+    }
+    .success-screen.show { display: flex; }
+    .success-icon { font-size: 64px; }
+    .success-title { font-size: 20px; font-weight: bold; color: #2E7D32; }
+    .success-sub { font-size: 14px; color: #666; line-height: 1.6; }
+    .btn-close {
+      margin-top: 8px;
+      padding: 12px 32px;
+      background: #2E7D32;
+      color: #fff;
+      border: none;
+      border-radius: 24px;
+      font-size: 15px;
+      font-family: inherit;
+      cursor: pointer;
     }
 
-    /* ─── Loading / Toast ─── */
+    /* ─── Loading overlay ─── */
     .overlay {
       display: none;
       position: fixed; inset: 0;
@@ -180,46 +175,30 @@
       animation: spin .7s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-
-    .toast {
-      position: fixed;
-      bottom: 80px; left: 50%; transform: translateX(-50%);
-      background: #323232;
-      color: #fff;
-      padding: 10px 20px;
-      border-radius: 20px;
-      font-size: 13px;
-      opacity: 0;
-      transition: opacity .3s;
-      pointer-events: none;
-      white-space: nowrap;
-      z-index: 200;
-    }
-    .toast.show { opacity: 1; }
   </style>
 </head>
 <body>
 
-<!-- Header (จะถูก populate จาก URL params) -->
-<div class="header">
+<!-- ─── Header ─── -->
+<div class="header" id="headerSection">
   <div class="label">🔴 งานค้าง Mark Complete</div>
   <div class="branch-name" id="branchName">กำลังโหลด...</div>
   <div class="sub" id="subInfo"></div>
 </div>
 
-<!-- Form -->
-<div class="form-body">
+<!-- ─── Form ─── -->
+<div class="form-body" id="formSection">
 
   <!-- Field 1: เหตุผล -->
   <div class="field-group">
     <label>เหตุผลที่ยังค้าง <span class="req">*</span></label>
     <div class="chip-grid" id="reasonChips">
-      <div class="chip" data-val="รอลูกค้ามารับสินค้า">รอลูกค้าติดต่อกลับ</div>
+      <div class="chip" data-val="รอลูกค้ามารับสินค้า">รอลูกค้ามารับสินค้า</div>
       <div class="chip" data-val="ลูกค้าติดต่อไม่ได้">ลูกค้าติดต่อไม่ได้</div>
-      <div class="chip" data-val="รอPartsที่แอดเพิ่ม">รอ Parts</div>
-      <div class="chip" data-val="รอApple ตอบEscalation">รอ Apple Approve</div>
-      <div class="chip" data-val="รอระบบAuto Mark Complete">รอลูกค้า Confirm ราคา</div>
-      <div class="chip" data-val="อื่นๆ">อื่นๆ ระบุเพิ่ม →</div>
+      <div class="chip" data-val="รอ Parts ที่แอดเพิ่ม">รอ Parts</div>
+      <div class="chip" data-val="รอ Apple ตอบ Escalation">รอ Apple ตอบ Escalation</div>
+      <div class="chip" data-val="รอระบบ Auto Mark Complete">รอระบบ Auto Mark</div>
+      <div class="chip" data-val="อื่นๆ">อื่นๆ →</div>
     </div>
     <textarea id="reasonOther" rows="2"
       placeholder="รายละเอียดเพิ่มเติม (ถ้ามี)..."></textarea>
@@ -232,11 +211,11 @@
       <div class="action-item" data-val="โทรหาลูกค้าวันนี้">
         <div class="dot"></div>โทรหาลูกค้าวันนี้
       </div>
-      <div class="action-item" data-val="ส่ง SMS / LINE /email แจ้งลูกค้า">
-        <div class="dot"></div>ส่ง SMS / LINE แจ้งลูกค้า
+      <div class="action-item" data-val="ส่ง SMS / LINE / email แจ้งลูกค้า">
+        <div class="dot"></div>ส่ง SMS / LINE / Emial แจ้งลูกค้า
       </div>
       <div class="action-item" data-val="Escalation Apple">
-        <div class="dot"></div>ประสานงาน Parts / Apple
+        <div class="dot"></div>Escalation to Apple
       </div>
       <div class="action-item" data-val="รอดำเนินการต่อ (ระบุในช่องอื่นๆ)">
         <div class="dot"></div>รอดำเนินการต่อ
@@ -248,36 +227,47 @@
 
 </div>
 
-<!-- Submit -->
-<div class="footer">
+<!-- ─── Submit button ─── -->
+<div class="footer" id="footerSection">
   <button class="btn-submit" id="btnSubmit" disabled onclick="handleSubmit()">
     ส่งข้อมูล
   </button>
 </div>
 
-<!-- Loading overlay -->
+<!-- ─── Success screen ─── -->
+<div class="success-screen" id="successScreen">
+  <div class="success-icon">✅</div>
+  <div class="success-title">ส่งข้อมูลแล้ว</div>
+  <div class="success-sub" id="successDetail"></div>
+  <button class="btn-close" onclick="window.close()">ปิดหน้าต่างนี้</button>
+</div>
+
+<!-- ─── Loading ─── -->
 <div class="overlay" id="overlay">
   <div class="spinner"></div>
 </div>
 
-<!-- Toast -->
-<div class="toast" id="toast"></div>
-
 <script>
-  // ─── State ──────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  //  ⚙️  ตั้งค่า Apps Script Web App URL ตรงนี้
+  //  → Apps Script → Deploy → Manage Deployments → copy URL
+  // ═══════════════════════════════════════════════════════════
+  var APPS_SCRIPT_URL = '__APPS_SCRIPT_WEB_APP_URL__';
+  // ตัวอย่าง: 'https://script.google.com/macros/s/AKfycbxxxxx.../exec'
+
+  // ─── State ──────────────────────────────────────────────────
   var selectedReason = '';
   var selectedAction = '';
-  var shipTo = '';
-  var branchName = '';
+  var shipTo         = '';
+  var branchName     = '';
 
-  // ─── Init ────────────────────────────────────────────
+  // ─── Init ───────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', function() {
-    // อ่าน params จาก URL
-    var params = new URLSearchParams(window.location.search);
-    shipTo     = params.get('shipTo') || '';
-    branchName = params.get('branch') || 'สาขา';
-    var itemCount = params.get('items') || '';
-    var maxDays   = params.get('days')  || '';
+    var params    = new URLSearchParams(window.location.search);
+    shipTo        = params.get('shipTo') || '';
+    branchName    = params.get('branch') || 'สาขา';
+    var itemCount = params.get('items')  || '';
+    var maxDays   = params.get('days')   || '';
 
     document.getElementById('branchName').textContent = branchName;
     if (itemCount && maxDays) {
@@ -285,99 +275,92 @@
         'พบ ' + itemCount + ' รายการ  |  ค้างสูงสุด ' + maxDays + ' วัน';
     }
 
-    // Chip: เหตุผล
+    // Chips: เหตุผล
     document.querySelectorAll('#reasonChips .chip').forEach(function(chip) {
       chip.addEventListener('click', function() {
-        document.querySelectorAll('#reasonChips .chip').forEach(function(c) {
-          c.classList.remove('selected');
-        });
+        document.querySelectorAll('#reasonChips .chip')
+          .forEach(function(c) { c.classList.remove('selected'); });
         chip.classList.add('selected');
         selectedReason = chip.dataset.val;
-        updateSubmitBtn();
+        updateBtn();
       });
     });
 
-    // Chip: การดำเนินการ
+    // Chips: การดำเนินการ
     document.querySelectorAll('#actionItems .action-item').forEach(function(item) {
       item.addEventListener('click', function() {
-        document.querySelectorAll('#actionItems .action-item').forEach(function(i) {
-          i.classList.remove('selected');
-        });
+        document.querySelectorAll('#actionItems .action-item')
+          .forEach(function(i) { i.classList.remove('selected'); });
         item.classList.add('selected');
         selectedAction = item.dataset.val;
-        updateSubmitBtn();
+        updateBtn();
       });
     });
 
-    // Textarea change
-    document.getElementById('reasonOther').addEventListener('input', updateSubmitBtn);
-    document.getElementById('actionOther').addEventListener('input', updateSubmitBtn);
-
-    // Init LIFF
-    liff.init({ liffId: '__LIFF_ID__' })
-      .then(function() {
-        if (!liff.isLoggedIn()) { liff.login(); }
-      })
-      .catch(function(err) {
-        console.warn('LIFF init error (preview mode):', err);
-        // ถ้า init ไม่ได้ (ทดสอบใน browser ปกติ) ก็ยังใช้งาน UI ได้
-      });
+    document.getElementById('reasonOther').addEventListener('input', updateBtn);
+    document.getElementById('actionOther').addEventListener('input', updateBtn);
   });
 
-  function updateSubmitBtn() {
-    var hasReason = selectedReason !== '';
-    var hasAction = selectedAction !== '';
-    document.getElementById('btnSubmit').disabled = !(hasReason && hasAction);
+  function updateBtn() {
+    document.getElementById('btnSubmit').disabled =
+      !(selectedReason && selectedAction);
   }
 
-  // ─── Submit ──────────────────────────────────────────
+  // ─── Submit ─────────────────────────────────────────────────
   function handleSubmit() {
-    var reasonText = selectedReason;
-    var otherReason = document.getElementById('reasonOther').value.trim();
-    if (otherReason) reasonText += ' (' + otherReason + ')';
+    // รวม reason + detail
+    var reason = selectedReason;
+    var extraR = document.getElementById('reasonOther').value.trim();
+    if (extraR) reason += ' (' + extraR + ')';
 
-    var actionText = selectedAction;
-    var otherAction = document.getElementById('actionOther').value.trim();
-    if (otherAction) actionText += ' — ' + otherAction;
-
-    // format ที่ doPost จะจับ: เหตุผล:{shipTo}:{reason} | {action}
-    var msgText = 'เหตุผล:' + shipTo + ':' + reasonText + ' | ' + actionText;
+    // รวม action + detail
+    var action = selectedAction;
+    var extraA = document.getElementById('actionOther').value.trim();
+    if (extraA) action += ' — ' + extraA;
 
     showOverlay(true);
 
-    // ส่งข้อความกลับกลุ่ม LINE
-    var sendPromise;
-    try {
-      sendPromise = liff.sendMessages([{ type: 'text', text: msgText }]);
-    } catch(e) {
-      // fallback สำหรับ test ใน browser ปกติ
-      sendPromise = Promise.resolve();
-      console.log('[TEST] จะส่ง:', msgText);
-    }
+    // ส่ง POST ไป Apps Script — ใช้ URLSearchParams (ไม่มี CORS preflight)
+    var body = new URLSearchParams({
+      type    : 'repair_reason',
+      shipTo  : shipTo,
+      reason  : reason,
+      action  : action
+    });
 
-    sendPromise
-      .then(function() {
-        showOverlay(false);
-        showToast('✅ ส่งข้อมูลแล้ว');
-        setTimeout(function() {
-          try { liff.closeWindow(); } catch(e) { window.close(); }
-        }, 1200);
-      })
-      .catch(function(err) {
-        showOverlay(false);
-        showToast('❌ ส่งไม่สำเร็จ: ' + err.message);
-      });
+    fetch(APPS_SCRIPT_URL, {
+      method      : 'POST',
+      body        : body,
+      redirect    : 'follow'
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      showOverlay(false);
+      if (data && data.status === 'ok') {
+        showSuccess(reason, action);
+      } else {
+        alert('⚠️ บันทึกไม่สำเร็จ: ' + (data && data.message ? data.message : 'Unknown'));
+      }
+    })
+    .catch(function(err) {
+      showOverlay(false);
+      alert('❌ เชื่อมต่อไม่ได้: ' + err.message);
+    });
+  }
+
+  function showSuccess(reason, action) {
+    // ซ่อน form — แสดง success
+    document.getElementById('formSection').style.display   = 'none';
+    document.getElementById('footerSection').style.display = 'none';
+    document.getElementById('successScreen').classList.add('show');
+    document.getElementById('successDetail').innerHTML =
+      '<b>' + branchName + '</b><br>'
+      + '📋 เหตุผล: ' + reason + '<br>'
+      + '✅ การดำเนินการ: ' + action;
   }
 
   function showOverlay(show) {
     document.getElementById('overlay').classList.toggle('show', show);
-  }
-
-  function showToast(msg) {
-    var t = document.getElementById('toast');
-    t.textContent = msg;
-    t.classList.add('show');
-    setTimeout(function() { t.classList.remove('show'); }, 2500);
   }
 </script>
 </body>
