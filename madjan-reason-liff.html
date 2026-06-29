@@ -33,8 +33,9 @@
     .card-head{
       padding:10px 14px 8px;display:flex;justify-content:space-between;align-items:flex-start;
     }
-    .card-head .id-block .rid{font-size:13px;font-weight:bold;color:#333}
-    .card-head .id-block .date{font-size:11px;color:#888;margin-top:2px}
+    .card-head .id-block .doc-label{font-size:10px;color:#999;letter-spacing:.3px;margin-bottom:2px}
+    .card-head .id-block .rid{font-size:14px;font-weight:bold;color:#1A237E}
+    .card-head .id-block .date{font-size:11px;color:#888;margin-top:3px}
     .card-head .right{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
     .badge{
       font-size:11px;font-weight:bold;border-radius:10px;padding:3px 10px;
@@ -42,7 +43,9 @@
     }
     .badge.red   {background:#FFEBEE;color:#C62828}
     .badge.orange{background:#FFF3E0;color:#E65100}
-    .amount{font-size:11px;color:#666;font-weight:500}
+    .amount-block{text-align:right}
+    .amount-label{font-size:10px;color:#999}
+    .amount{font-size:13px;color:#E65100;font-weight:bold}
 
     /* chips */
     .card-body{padding:0 14px 12px}
@@ -230,12 +233,16 @@ function renderAll(){
     var amtStr = Number(item.amount).toLocaleString('th-TH', {minimumFractionDigits:0}) + ' ฿';
     head.innerHTML =
       '<div class="id-block">'
+      + '<div class="doc-label">เลขที่เอกสาร (Doc No)</div>'
       + '<div class="rid">#' + esc(item.docNo) + '</div>'
-      + '<div class="date">วันที่ ' + esc(item.dateStr) + '</div>'
+      + '<div class="date">📅 ' + esc(item.dateStr) + '</div>'
       + '</div>'
       + '<div class="right">'
-      + '<div class="badge ' + badgeCls + '">' + daysNum + ' วัน</div>'
+      + '<div class="badge ' + badgeCls + '">⏱ ' + daysNum + ' วัน</div>'
+      + '<div class="amount-block">'
+      + '<div class="amount-label">ราคารวม</div>'
       + '<div class="amount">' + amtStr + '</div>'
+      + '</div>'
       + '</div>';
 
     /* body */
@@ -263,7 +270,7 @@ function renderAll(){
     memoLabel.textContent = 'Memo / เลขที่เอกสาร';
     var memoTa = document.createElement('textarea');
     memoTa.className = 'memo'; memoTa.rows = 2;
-    memoTa.placeholder = 'กรอก Memo หรือเลขที่เอกสาร...';
+    memoTa.placeholder = 'กรอก Memo หรือเลขที่เอกสาร (บังคับสำหรับ R1 และ R6)';
     memoTa.value = existing.memo || '';
     memoTa.addEventListener('input', function(){
       itemState[item.docNo].memo = memoTa.value.trim();
@@ -323,44 +330,58 @@ function selectReason(docNo, code, chipsContainer, memoWrap, memoTa){
 
   /* card color */
   var card = document.getElementById('card-' + safeDomId(docNo));
+  var needMemo = (code === 'R1' || code === 'R6') && !itemState[docNo].memo;
   if(card){
     card.classList.add('filled');
-    card.classList.toggle('need-memo', code === 'R1' && !itemState[docNo].memo);
+    card.classList.toggle('need-memo', needMemo);
   }
 
+  /* memo placeholder เปลี่ยนตาม code */
+  if(code === 'R1'){
+    memoTa.placeholder = 'เลขที่เอกสารคืนเงิน / Memo *';
+  } else if(code === 'R6'){
+    memoTa.placeholder = 'ระบุรายละเอียด เช่น ดำเนินการเปิดบิลขายภายในวันนี้ *';
+  } else {
+    memoTa.placeholder = 'Memo เพิ่มเติม (ถ้ามี)';
+  }
   memoTa.focus();
   updateHeader();
 }
 
 function updateCard(docNo, memoLabel){
-  var st   = itemState[docNo];
-  var isR1 = (st.reasonCode === 'R1');
+  var st      = itemState[docNo];
+  var isR1    = (st.reasonCode === 'R1');
+  var isR6    = (st.reasonCode === 'R6');
+  var needReq = isR1 || isR6;
   if(memoLabel){
-    memoLabel.className = 'memo-label' + (isR1 ? ' req' : '');
-    memoLabel.textContent = isR1 ? 'เลขที่เอกสาร / Memo *' : 'Memo / เลขที่เอกสาร';
+    memoLabel.className = 'memo-label' + (needReq ? ' req' : '');
+    if(isR1)      memoLabel.textContent = 'เลขที่เอกสาร / Memo *';
+    else if(isR6) memoLabel.textContent = 'รายละเอียด *';
+    else          memoLabel.textContent = 'Memo / เลขที่เอกสาร';
   }
   var card = document.getElementById('card-' + safeDomId(docNo));
-  if(card) card.classList.toggle('need-memo', isR1 && !st.memo);
+  if(card) card.classList.toggle('need-memo', needReq && !st.memo);
   var ribbon = document.getElementById('rib-' + safeDomId(docNo));
   if(ribbon && st.reasonCode){
-    ribbon.classList.toggle('warn', isR1 && !st.memo);
+    ribbon.classList.toggle('warn', needReq && !st.memo);
     ribbon.textContent = '📝 ' + st.reasonCode + ': ' + (reasonDefs[st.reasonCode] || '')
-      + (st.memo ? ' | ' + st.memo : (isR1 ? ' ⚠️ ต้องใส่ Memo' : ''));
+      + (st.memo ? ' | ' + st.memo : (needReq ? ' ⚠️ ต้องระบุรายละเอียด' : ''));
   }
 }
 
 function updateHeader(){
-  var filled = 0, warnR1 = 0;
+  var filled = 0, warnMemo = 0;
   allItems.forEach(function(it){
     var s = itemState[it.docNo];
     if(!s.reasonCode) return;
-    if(s.reasonCode === 'R1' && !s.memo){ warnR1++; return; }
+    var needReq = (s.reasonCode === 'R1' || s.reasonCode === 'R6');
+    if(needReq && !s.memo){ warnMemo++; return; }
     filled++;
   });
   var total = allItems.length;
   document.getElementById('hBranch').textContent = branchName;
   document.getElementById('hProg').textContent   = 'ระบุแล้ว ' + filled + '/' + total
-    + (warnR1 ? '  |  ⚠️ R1 ต้องใส่ Memo ' + warnR1 + ' รายการ' : '');
+    + (warnMemo ? '  |  ⚠️ ต้องใส่รายละเอียด ' + warnMemo + ' รายการ' : '');
   document.getElementById('progBar').style.width = Math.round(filled/total*100) + '%';
   var btn = document.getElementById('btnSubmit');
   btn.disabled  = (filled === 0);
@@ -369,22 +390,23 @@ function updateHeader(){
 
 /* ── Submit ── */
 function submitAll(){
-  var toSend = [];
-  var warnR1 = [];
+  var toSend  = [];
+  var warnReq = [];   // R1/R6 ที่ยังไม่มี Memo
   allItems.forEach(function(it){
     var s = itemState[it.docNo];
     if(!s.reasonCode) return;
-    if(s.reasonCode === 'R1' && !s.memo){ warnR1.push(it.docNo); return; }
+    var needReq = (s.reasonCode === 'R1' || s.reasonCode === 'R6');
+    if(needReq && !s.memo){ warnReq.push('#' + it.docNo + ' (' + s.reasonCode + ')'); return; }
     toSend.push({docNo: it.docNo, reasonCode: s.reasonCode, memo: s.memo || ''});
   });
-  if(toSend.length === 0 && warnR1.length > 0){
-    alert('⚠️ R1 (คืนเงิน) ต้องใส่ Memo ก่อนบันทึก:\n' + warnR1.join(', '));
+  if(toSend.length === 0 && warnReq.length > 0){
+    alert('⚠️ R1/R6 ต้องใส่รายละเอียดก่อนบันทึก:\n' + warnReq.join('\n'));
     return;
   }
   if(toSend.length === 0){ alert('กรุณาเลือกเหตุผลอย่างน้อย 1 รายการ'); return; }
 
   var confirmTxt = 'บันทึก ' + toSend.length + ' รายการ';
-  if(warnR1.length) confirmTxt += '\n(ข้าม R1 ที่ไม่มี Memo: ' + warnR1.length + ' รายการ)';
+  if(warnReq.length) confirmTxt += '\n(ข้าม R1/R6 ที่ไม่มีรายละเอียด: ' + warnReq.length + ' รายการ)';
 
   showOverlay(true);
   var body = new URLSearchParams({
