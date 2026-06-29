@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ระบุเหตุผล — มัดจำค้าง</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:'LINE Seed Sans TH','Sarabun',sans-serif;
+      background:#f0f2f5;min-height:100vh;display:flex;flex-direction:column;
+    }
+
+    /* ── Header ── */
+    .header{background:#E65100;color:#fff;padding:14px 16px 12px;position:sticky;top:0;z-index:10}
+    .header .lbl{font-size:11px;opacity:.8;letter-spacing:.3px}
+    .header .name{font-size:17px;font-weight:bold;margin:2px 0}
+    .header .prog{font-size:12px;opacity:.85}
+    .progress-bar{height:3px;background:rgba(255,255,255,.3);margin-top:10px;border-radius:2px;overflow:hidden}
+    .progress-fill{height:100%;background:#fff;border-radius:2px;transition:width .3s}
+
+    /* ── Scroll area ── */
+    .scroll-area{flex:1;padding:12px 12px 0;overflow-y:auto}
+
+    /* ── Item card ── */
+    .item-card{
+      background:#fff;border-radius:12px;margin-bottom:10px;
+      border:2px solid #e0e0e0;overflow:hidden;transition:border-color .2s;
+    }
+    .item-card.filled{border-color:#E65100}
+    .item-card.need-memo{border-color:#F9A825}
+
+    .card-head{
+      padding:10px 14px 8px;display:flex;justify-content:space-between;align-items:flex-start;
+    }
+    .card-head .id-block .rid{font-size:13px;font-weight:bold;color:#333}
+    .card-head .id-block .date{font-size:11px;color:#888;margin-top:2px}
+    .card-head .right{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+    .badge{
+      font-size:11px;font-weight:bold;border-radius:10px;padding:3px 10px;
+      white-space:nowrap;
+    }
+    .badge.red   {background:#FFEBEE;color:#C62828}
+    .badge.orange{background:#FFF3E0;color:#E65100}
+    .amount{font-size:11px;color:#666;font-weight:500}
+
+    /* chips */
+    .card-body{padding:0 14px 12px}
+    .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+    .chip{
+      padding:5px 12px;border-radius:16px;border:1.5px solid #BDBDBD;
+      background:#fff;font-size:12px;color:#555;cursor:pointer;
+      transition:all .15s;user-select:none;
+    }
+    .chip.sel{border-color:#E65100;background:#FFF3E0;color:#BF360C;font-weight:bold}
+
+    /* memo field */
+    .memo-wrap{margin-top:6px}
+    .memo-label{font-size:11px;color:#666;margin-bottom:4px}
+    .memo-label.req{color:#C62828;font-weight:bold}
+    textarea.memo{
+      width:100%;border:1.5px solid #BDBDBD;border-radius:8px;
+      padding:8px 10px;font-size:12px;font-family:inherit;
+      resize:none;outline:none;transition:border-color .15s;color:#333;
+    }
+    textarea.memo:focus{border-color:#E65100}
+
+    /* status ribbon */
+    .status-ribbon{
+      font-size:11px;text-align:center;padding:4px 0;font-weight:bold;
+      display:none;background:#E65100;color:#fff;
+    }
+    .status-ribbon.show{display:block}
+    .status-ribbon.warn{background:#F9A825;color:#333}
+
+    /* ── Footer ── */
+    .footer{padding:12px;background:#fff;border-top:1px solid #e0e0e0;position:sticky;bottom:0}
+    .btn-submit{
+      width:100%;padding:13px;background:#E65100;color:#fff;
+      border:none;border-radius:12px;font-size:15px;font-weight:bold;
+      font-family:inherit;cursor:pointer;transition:background .15s;
+    }
+    .btn-submit:active{background:#BF360C}
+    .btn-submit:disabled{background:#BDBDBD;cursor:not-allowed}
+
+    /* ── Screens ── */
+    .screen{display:none;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:32px 24px;text-align:center;gap:14px}
+    .screen.show{display:flex}
+    .screen-icon{font-size:52px}
+    .screen-title{font-size:18px;font-weight:bold}
+    .screen-sub{font-size:13px;color:#666;line-height:1.7;max-width:340px}
+    .btn-close{
+      margin-top:4px;padding:11px 28px;border:none;border-radius:24px;
+      font-size:14px;font-family:inherit;cursor:pointer;font-weight:bold;
+    }
+    .btn-close.orange{background:#E65100;color:#fff}
+    .btn-close.green {background:#2E7D32;color:#fff}
+    .btn-close.red   {background:#C62828;color:#fff}
+
+    /* spinner */
+    .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center}
+    .overlay.show{display:flex}
+    .spinner{width:42px;height:42px;border:4px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* notice box */
+    .notice{
+      background:#FFF8E1;border:1px solid #FFD54F;border-radius:10px;
+      padding:10px 14px;font-size:12px;color:#6D4C41;line-height:1.6;
+      margin-bottom:10px;
+    }
+    .notice strong{color:#E65100}
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header" id="hdr" style="display:none">
+  <div class="lbl">🟠 มัดจำค้าง &gt;20 วัน</div>
+  <div class="name" id="hBranch"></div>
+  <div class="prog" id="hProg"></div>
+  <div class="progress-bar"><div class="progress-fill" id="progBar" style="width:0%"></div></div>
+</div>
+
+<!-- Scroll area -->
+<div class="scroll-area" id="scrollArea" style="display:none"></div>
+
+<!-- Footer -->
+<div class="footer" id="footer" style="display:none">
+  <button class="btn-submit" id="btnSubmit" disabled onclick="submitAll()">บันทึกเหตุผล</button>
+</div>
+
+<!-- Loading -->
+<div class="screen show" id="scrLoad">
+  <div class="screen-icon">⏳</div>
+  <div class="screen-title">กำลังโหลด...</div>
+  <div class="screen-sub">ดึงรายการมัดจำค้าง</div>
+</div>
+
+<!-- Empty -->
+<div class="screen" id="scrEmpty">
+  <div class="screen-icon">✅</div>
+  <div class="screen-title">ไม่มีมัดจำค้าง &gt;20 วัน</div>
+  <div class="screen-sub">สาขานี้ไม่มีรายการที่ต้องระบุเหตุผลในขณะนี้</div>
+  <button class="btn-close green" onclick="window.close()">ปิดหน้าต่าง</button>
+</div>
+
+<!-- Error -->
+<div class="screen" id="scrErr">
+  <div class="screen-icon">❌</div>
+  <div class="screen-title">โหลดไม่สำเร็จ</div>
+  <div class="screen-sub" id="errMsg">ไม่สามารถดึงข้อมูลได้ กรุณาลองใหม่</div>
+  <button class="btn-close red" onclick="location.reload()">ลองใหม่</button>
+</div>
+
+<!-- Success -->
+<div class="screen" id="scrOk">
+  <div class="screen-icon">✅</div>
+  <div class="screen-title">บันทึกสำเร็จ!</div>
+  <div class="screen-sub" id="okMsg"></div>
+  <button class="btn-close green" onclick="window.close()">ปิดหน้าต่าง</button>
+</div>
+
+<!-- Overlay -->
+<div class="overlay" id="overlay"><div class="spinner"></div></div>
+
+<script>
+/* ════════════════════════════════════════════════════════════════
+   ⚙️  GAS URL — เปลี่ยนตาม Deployment ปัจจุบัน
+════════════════════════════════════════════════════════════════ */
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbyI92CBA4gN7YxfszACYE-Oaj58s4LM3xeScs4wl48D2kIeV8LShDHQ8ThJQtAdGN094Q/exec';
+
+/* ── State ── */
+var allItems   = [];
+var itemState  = {};   // docNo → {reasonCode, memo}
+var reasonDefs = {};   // from server: {R1:'...', R2:'...', ...}
+var branchId   = '';
+var branchName = '';
+
+/* ── Boot ── */
+document.addEventListener('DOMContentLoaded', function(){
+  var p = new URLSearchParams(window.location.search);
+  branchId = (p.get('branch') || '').trim();
+  if(!branchId){ showErr('URL ไม่มี branch parameter'); return; }
+  fetchItems();
+});
+
+function fetchItems(){
+  fetch(GAS_URL + '?type=getMadjan&branch=' + encodeURIComponent(branchId))
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(d.status !== 'ok'){ showErr(d.message || 'server error'); return; }
+      branchName = d.branchName || ('Branch ' + branchId);
+      reasonDefs = d.reasonCodes || {};
+      allItems   = d.items || [];
+      if(allItems.length === 0){ showScreen('scrEmpty'); return; }
+      allItems.forEach(function(it){
+        itemState[it.docNo] = {reasonCode: it.reasonCode || '', memo: it.memo || ''};
+      });
+      renderAll();
+    })
+    .catch(function(e){ showErr(e.message); });
+}
+
+/* ── Render ── */
+function renderAll(){
+  var sa   = document.getElementById('scrollArea');
+  sa.innerHTML = '';
+
+  /* notice box */
+  var notice = document.createElement('div');
+  notice.className = 'notice';
+  notice.innerHTML = '⚠️ รายการที่แสดงค้างมัดจำ <strong>&gt;20 วัน</strong> ต้องระบุเหตุผล<br>'
+    + 'R1 (คืนเงิน) ต้องใส่เลขที่เอกสาร/Memo ด้วย';
+  sa.appendChild(notice);
+
+  allItems.forEach(function(item){
+    var daysNum  = parseInt(item.days) || 0;
+    var badgeCls = daysNum >= 60 ? 'red' : 'orange';
+    var existing = itemState[item.docNo];
+
+    var card = document.createElement('div');
+    card.className = 'item-card';
+    if(existing.reasonCode) card.classList.add('filled');
+    card.id = 'card-' + safeDomId(item.docNo);
+
+    /* head */
+    var head = document.createElement('div');
+    head.className = 'card-head';
+    var amtStr = Number(item.amount).toLocaleString('th-TH', {minimumFractionDigits:0}) + ' ฿';
+    head.innerHTML =
+      '<div class="id-block">'
+      + '<div class="rid">#' + esc(item.docNo) + '</div>'
+      + '<div class="date">วันที่ ' + esc(item.dateStr) + '</div>'
+      + '</div>'
+      + '<div class="right">'
+      + '<div class="badge ' + badgeCls + '">' + daysNum + ' วัน</div>'
+      + '<div class="amount">' + amtStr + '</div>'
+      + '</div>';
+
+    /* body */
+    var body = document.createElement('div');
+    body.className = 'card-body';
+
+    /* reason chips */
+    var chips = document.createElement('div');
+    chips.className = 'chips';
+    Object.keys(reasonDefs).forEach(function(code){
+      var ch = document.createElement('div');
+      ch.className = 'chip' + (existing.reasonCode === code ? ' sel' : '');
+      ch.textContent = code + ': ' + reasonDefs[code];
+      ch.addEventListener('click', function(){
+        selectReason(item.docNo, code, chips, memoWrap, memoTa);
+      });
+      chips.appendChild(ch);
+    });
+
+    /* memo */
+    var memoWrap = document.createElement('div');
+    memoWrap.className = 'memo-wrap';
+    var memoLabel = document.createElement('div');
+    memoLabel.className = 'memo-label';
+    memoLabel.textContent = 'Memo / เลขที่เอกสาร';
+    var memoTa = document.createElement('textarea');
+    memoTa.className = 'memo'; memoTa.rows = 2;
+    memoTa.placeholder = 'กรอก Memo หรือเลขที่เอกสาร...';
+    memoTa.value = existing.memo || '';
+    memoTa.addEventListener('input', function(){
+      itemState[item.docNo].memo = memoTa.value.trim();
+      updateHeader();
+      updateCard(item.docNo, memoLabel);
+    });
+    memoWrap.appendChild(memoLabel);
+    memoWrap.appendChild(memoTa);
+
+    /* status ribbon */
+    var ribbon = document.createElement('div');
+    ribbon.className = 'status-ribbon';
+    ribbon.id = 'rib-' + safeDomId(item.docNo);
+    if(existing.reasonCode){
+      ribbon.textContent = '📝 ' + existing.reasonCode + ': ' + (reasonDefs[existing.reasonCode] || '');
+      ribbon.classList.add('show');
+    }
+
+    body.appendChild(chips);
+    body.appendChild(memoWrap);
+    card.appendChild(head);
+    card.appendChild(body);
+    card.appendChild(ribbon);
+    sa.appendChild(card);
+
+    /* update memo label if R1 pre-filled */
+    if(existing.reasonCode === 'R1') updateCard(item.docNo, memoLabel);
+  });
+
+  document.getElementById('hdr').style.display = '';
+  document.getElementById('scrollArea').style.display = '';
+  document.getElementById('footer').style.display = '';
+  showScreen(null);
+  updateHeader();
+}
+
+function selectReason(docNo, code, chipsContainer, memoWrap, memoTa){
+  /* deselect all */
+  chipsContainer.querySelectorAll('.chip').forEach(function(c){ c.classList.remove('sel'); });
+  /* select clicked */
+  chipsContainer.querySelectorAll('.chip').forEach(function(c){
+    if(c.textContent.indexOf(code + ':') === 0) c.classList.add('sel');
+  });
+  itemState[docNo].reasonCode = code;
+
+  /* memo label */
+  var memoLabel = memoWrap.querySelector('.memo-label');
+  updateCard(docNo, memoLabel);
+
+  /* ribbon */
+  var ribbon = document.getElementById('rib-' + safeDomId(docNo));
+  if(ribbon){
+    ribbon.textContent = '📝 ' + code + ': ' + (reasonDefs[code] || '');
+    ribbon.classList.add('show');
+    ribbon.classList.toggle('warn', code === 'R1' && !itemState[docNo].memo);
+  }
+
+  /* card color */
+  var card = document.getElementById('card-' + safeDomId(docNo));
+  if(card){
+    card.classList.add('filled');
+    card.classList.toggle('need-memo', code === 'R1' && !itemState[docNo].memo);
+  }
+
+  memoTa.focus();
+  updateHeader();
+}
+
+function updateCard(docNo, memoLabel){
+  var st   = itemState[docNo];
+  var isR1 = (st.reasonCode === 'R1');
+  if(memoLabel){
+    memoLabel.className = 'memo-label' + (isR1 ? ' req' : '');
+    memoLabel.textContent = isR1 ? 'เลขที่เอกสาร / Memo *' : 'Memo / เลขที่เอกสาร';
+  }
+  var card = document.getElementById('card-' + safeDomId(docNo));
+  if(card) card.classList.toggle('need-memo', isR1 && !st.memo);
+  var ribbon = document.getElementById('rib-' + safeDomId(docNo));
+  if(ribbon && st.reasonCode){
+    ribbon.classList.toggle('warn', isR1 && !st.memo);
+    ribbon.textContent = '📝 ' + st.reasonCode + ': ' + (reasonDefs[st.reasonCode] || '')
+      + (st.memo ? ' | ' + st.memo : (isR1 ? ' ⚠️ ต้องใส่ Memo' : ''));
+  }
+}
+
+function updateHeader(){
+  var filled = 0, warnR1 = 0;
+  allItems.forEach(function(it){
+    var s = itemState[it.docNo];
+    if(!s.reasonCode) return;
+    if(s.reasonCode === 'R1' && !s.memo){ warnR1++; return; }
+    filled++;
+  });
+  var total = allItems.length;
+  document.getElementById('hBranch').textContent = branchName;
+  document.getElementById('hProg').textContent   = 'ระบุแล้ว ' + filled + '/' + total
+    + (warnR1 ? '  |  ⚠️ R1 ต้องใส่ Memo ' + warnR1 + ' รายการ' : '');
+  document.getElementById('progBar').style.width = Math.round(filled/total*100) + '%';
+  var btn = document.getElementById('btnSubmit');
+  btn.disabled  = (filled === 0);
+  btn.textContent = filled > 0 ? 'บันทึก ' + filled + ' รายการ' : 'บันทึกเหตุผล';
+}
+
+/* ── Submit ── */
+function submitAll(){
+  var toSend = [];
+  var warnR1 = [];
+  allItems.forEach(function(it){
+    var s = itemState[it.docNo];
+    if(!s.reasonCode) return;
+    if(s.reasonCode === 'R1' && !s.memo){ warnR1.push(it.docNo); return; }
+    toSend.push({docNo: it.docNo, reasonCode: s.reasonCode, memo: s.memo || ''});
+  });
+  if(toSend.length === 0 && warnR1.length > 0){
+    alert('⚠️ R1 (คืนเงิน) ต้องใส่ Memo ก่อนบันทึก:\n' + warnR1.join(', '));
+    return;
+  }
+  if(toSend.length === 0){ alert('กรุณาเลือกเหตุผลอย่างน้อย 1 รายการ'); return; }
+
+  var confirmTxt = 'บันทึก ' + toSend.length + ' รายการ';
+  if(warnR1.length) confirmTxt += '\n(ข้าม R1 ที่ไม่มี Memo: ' + warnR1.length + ' รายการ)';
+
+  showOverlay(true);
+  var body = new URLSearchParams({
+    type     : 'madjan_reason_batch',
+    branchId : branchId,
+    items    : JSON.stringify(toSend),
+  });
+  fetch(GAS_URL, {method:'POST', body:body, redirect:'follow'})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      showOverlay(false);
+      if(d && d.status === 'ok'){
+        document.getElementById('okMsg').innerText = branchName + '\n' + confirmTxt;
+        showScreen('scrOk');
+        document.getElementById('hdr').style.display = 'none';
+        document.getElementById('scrollArea').style.display = 'none';
+        document.getElementById('footer').style.display = 'none';
+      } else {
+        alert('⚠️ บันทึกไม่สำเร็จ: ' + (d && d.message ? d.message : 'Unknown'));
+      }
+    })
+    .catch(function(e){ showOverlay(false); alert('❌ เชื่อมต่อไม่ได้: ' + e.message); });
+}
+
+/* ── Helpers ── */
+function showScreen(id){
+  ['scrLoad','scrEmpty','scrErr','scrOk'].forEach(function(s){
+    document.getElementById(s).classList.toggle('show', s === id);
+  });
+}
+function showErr(msg){ document.getElementById('errMsg').textContent = msg; showScreen('scrErr'); }
+function showOverlay(show){ document.getElementById('overlay').classList.toggle('show', show); }
+function esc(t){ var d=document.createElement('div'); d.textContent=t; return d.innerHTML; }
+function safeDomId(s){ return String(s).replace(/[^a-z0-9]/gi,'_'); }
+</script>
+</body>
+</html>

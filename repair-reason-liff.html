@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ระบุเหตุผล — งานค้าง Mark Complete</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:'LINE Seed Sans TH','Sarabun',sans-serif;
+      background:#f0f2f5;min-height:100vh;display:flex;flex-direction:column;
+    }
+
+    /* ── Header ── */
+    .header{background:#C62828;color:#fff;padding:14px 16px 12px;position:sticky;top:0;z-index:10}
+    .header .lbl{font-size:11px;opacity:.8;letter-spacing:.3px}
+    .header .name{font-size:17px;font-weight:bold;margin:2px 0}
+    .header .prog{font-size:12px;opacity:.85}
+    .progress-bar{height:3px;background:rgba(255,255,255,.3);margin-top:10px;border-radius:2px;overflow:hidden}
+    .progress-fill{height:100%;background:#fff;border-radius:2px;transition:width .3s}
+
+    /* ── Scroll area ── */
+    .scroll-area{flex:1;padding:12px 12px 0;overflow-y:auto}
+
+    /* ── Item card ── */
+    .item-card{
+      background:#fff;border-radius:12px;margin-bottom:10px;
+      border:2px solid #e0e0e0;overflow:hidden;transition:border-color .2s;
+    }
+    .item-card.done  {border-color:#2E7D32;background:#F1F8E9}
+    .item-card.filled{border-color:#1565C0;background:#E8F4FD}
+
+    .card-head{
+      padding:10px 14px 8px;display:flex;justify-content:space-between;align-items:flex-start;
+    }
+    .card-head .id-block .rid{font-size:13px;font-weight:bold;color:#333;letter-spacing:.2px}
+    .card-head .id-block .prod{font-size:11px;color:#666;margin-top:2px}
+    .badge{
+      font-size:11px;font-weight:bold;border-radius:10px;padding:3px 10px;
+      white-space:nowrap;flex-shrink:0;margin-left:8px;margin-top:2px;
+    }
+    .badge.red   {background:#FFEBEE;color:#C62828}
+    .badge.orange{background:#FFF3E0;color:#E65100}
+    .badge.green {background:#E8F5E9;color:#2E7D32}
+
+    /* chip row */
+    .card-body{padding:0 14px 12px}
+    .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+    .chip{
+      padding:5px 12px;border-radius:16px;border:1.5px solid #BDBDBD;
+      background:#fff;font-size:12px;color:#555;cursor:pointer;
+      transition:all .15s;user-select:none;
+    }
+    .chip.sel-done {border-color:#2E7D32;background:#2E7D32;color:#fff;font-weight:bold}
+    .chip.sel-other{border-color:#1565C0;background:#1565C0;color:#fff;font-weight:bold}
+    .chip.sel-pick {border-color:#1565C0;background:#E3F2FD;color:#0D47A1;font-weight:bold}
+
+    .detail-wrap{margin-top:4px;display:none}
+    .detail-wrap.show{display:block}
+    textarea.detail{
+      width:100%;border:1.5px solid #BDBDBD;border-radius:8px;
+      padding:8px 10px;font-size:12px;font-family:inherit;
+      resize:none;outline:none;transition:border-color .15s;color:#333;
+    }
+    textarea.detail:focus{border-color:#1565C0}
+
+    /* status ribbon */
+    .status-ribbon{
+      font-size:11px;text-align:center;padding:5px 0;font-weight:bold;
+      display:none;
+    }
+    .status-ribbon.show{display:block}
+    .status-ribbon.done  {background:#2E7D32;color:#fff}
+    .status-ribbon.filled{background:#1565C0;color:#fff}
+
+    /* ── Footer ── */
+    .footer{padding:12px;background:#fff;border-top:1px solid #e0e0e0;position:sticky;bottom:0}
+    .btn-submit{
+      width:100%;padding:13px;background:#C62828;color:#fff;
+      border:none;border-radius:12px;font-size:15px;font-weight:bold;
+      font-family:inherit;cursor:pointer;transition:background .15s;
+    }
+    .btn-submit:active{background:#B71C1C}
+    .btn-submit:disabled{background:#BDBDBD;cursor:not-allowed}
+
+    /* ── Loading / Error / Success screens ── */
+    .screen{display:none;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:32px 24px;text-align:center;gap:14px}
+    .screen.show{display:flex}
+    .screen-icon{font-size:52px}
+    .screen-title{font-size:18px;font-weight:bold}
+    .screen-sub{font-size:13px;color:#666;line-height:1.7;max-width:340px}
+    .btn-close{
+      margin-top:4px;padding:11px 28px;border:none;border-radius:24px;
+      font-size:14px;font-family:inherit;cursor:pointer;font-weight:bold;
+    }
+    .btn-close.green{background:#2E7D32;color:#fff}
+    .btn-close.red  {background:#C62828;color:#fff}
+
+    /* spinner overlay */
+    .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center}
+    .overlay.show{display:flex}
+    .spinner{width:42px;height:42px;border:4px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header" id="hdr" style="display:none">
+  <div class="lbl">🔴 งานค้าง Mark Complete</div>
+  <div class="name" id="hBranch"></div>
+  <div class="prog" id="hProg"></div>
+  <div class="progress-bar"><div class="progress-fill" id="progBar" style="width:0%"></div></div>
+</div>
+
+<!-- Item list -->
+<div class="scroll-area" id="scrollArea" style="display:none"></div>
+
+<!-- Submit footer -->
+<div class="footer" id="footer" style="display:none">
+  <button class="btn-submit" id="btnSubmit" disabled onclick="submitAll()">ส่งทั้งหมด</button>
+</div>
+
+<!-- Loading -->
+<div class="screen show" id="scrLoad">
+  <div class="screen-icon">⏳</div>
+  <div class="screen-title">กำลังโหลด...</div>
+  <div class="screen-sub">ดึงรายการงานค้าง</div>
+</div>
+
+<!-- No items -->
+<div class="screen" id="scrEmpty">
+  <div class="screen-icon">✅</div>
+  <div class="screen-title">ไม่มีงานค้าง</div>
+  <div class="screen-sub">สาขานี้ไม่มีงานค้างที่ต้องระบุเหตุผลในขณะนี้</div>
+  <button class="btn-close green" onclick="window.close()">ปิดหน้าต่าง</button>
+</div>
+
+<!-- Error -->
+<div class="screen" id="scrErr">
+  <div class="screen-icon">❌</div>
+  <div class="screen-title">เชื่อมต่อไม่ได้</div>
+  <div class="screen-sub" id="errMsg">ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่</div>
+  <button class="btn-close red" onclick="location.reload()">ลองใหม่</button>
+</div>
+
+<!-- Success -->
+<div class="screen" id="scrOk">
+  <div class="screen-icon">✅</div>
+  <div class="screen-title">บันทึกสำเร็จ!</div>
+  <div class="screen-sub" id="okMsg"></div>
+  <button class="btn-close green" onclick="window.close()">ปิดหน้าต่าง</button>
+</div>
+
+<!-- Overlay spinner -->
+<div class="overlay" id="overlay"><div class="spinner"></div></div>
+
+<script>
+/* ════════════════════════════════════════════════════════════════
+   ⚙️  GAS URL — เปลี่ยนตาม Deployment ปัจจุบัน
+════════════════════════════════════════════════════════════════ */
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbyI92CBA4gN7YxfszACYE-Oaj58s4LM3xeScs4wl48D2kIeV8LShDHQ8ThJQtAdGN094Q/exec';
+
+/* ── Reason options ───────────────────────────────────────────── */
+var REASONS = [
+  { val:'Mark Completed เรียบร้อย', lbl:'✅ Mark Completed',    cls:'sel-done'  },
+  { val:'รอลูกค้ามารับสินค้า',       lbl:'รอลูกค้ามารับ',       cls:'sel-pick'  },
+  { val:'ลูกค้าติดต่อไม่ได้',         lbl:'ลูกค้าติดต่อไม่ได้',   cls:'sel-pick'  },
+  { val:'รอ Parts แอดPartเพิ่ม',      lbl:'รอ Parts',             cls:'sel-pick'  },
+  { val:'รอ Apple ตอบ Escalation',   lbl:'รอ Escalation',        cls:'sel-pick'  },
+  { val:'รอระบบ Auto Mark Complete', lbl:'รอ Auto Mark',         cls:'sel-pick'  },
+  { val:'__other__',                  lbl:'อื่นๆ →',              cls:'sel-other' },
+];
+
+/* ── State ────────────────────────────────────────────────────── */
+var allItems = [];     // [{repairId, product, repairType, status, days, dateStr}]
+var itemState = {};    // repairId → {reason, detail}
+var shipTo    = '';
+var branchName= '';
+
+/* ── Boot ─────────────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', function(){
+  var params = new URLSearchParams(window.location.search);
+  shipTo = (params.get('shipTo') || '').replace(/^0+/,'');
+  if (!shipTo) { showErr('URL ไม่มี shipTo parameter'); return; }
+  fetchItems();
+});
+
+function fetchItems(){
+  fetch(GAS_URL + '?type=getRepairs&shipTo=' + encodeURIComponent(shipTo))
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d.status !== 'ok') { showErr(d.message || 'server error'); return; }
+      branchName = d.branchName || ('Branch ' + shipTo);
+      allItems   = d.items || [];
+      if (allItems.length === 0){ showScreen('scrEmpty'); return; }
+      allItems.forEach(function(it){ itemState[it.repairId] = {reason:'', detail:''}; });
+      renderAll();
+    })
+    .catch(function(e){ showErr(e.message); });
+}
+
+/* ── Render all item cards ────────────────────────────────────── */
+function renderAll(){
+  var sa = document.getElementById('scrollArea');
+  sa.innerHTML = '';
+
+  allItems.forEach(function(item, idx){
+    var daysNum  = parseInt(item.days) || 0;
+    var badgeCls = daysNum >= 30 ? 'red' : daysNum >= 21 ? 'orange' : 'green';
+
+    /* card wrapper */
+    var card  = document.createElement('div');
+    card.className = 'item-card';
+    card.id  = 'card-' + item.repairId;
+
+    /* head */
+    var head = document.createElement('div');
+    head.className = 'card-head';
+    head.innerHTML =
+      '<div class="id-block">'
+      + '<div class="rid">' + esc(item.repairId) + '</div>'
+      + '<div class="prod">' + esc(item.product || item.repairType || '') + '</div>'
+      + '</div>'
+      + '<div class="badge ' + badgeCls + '">' + daysNum + ' วัน</div>';
+
+    /* body */
+    var body  = document.createElement('div');
+    body.className = 'card-body';
+
+    /* chips */
+    var chips = document.createElement('div');
+    chips.className = 'chips';
+    REASONS.forEach(function(r){
+      var ch = document.createElement('div');
+      ch.className = 'chip';
+      ch.textContent = r.lbl;
+      ch.addEventListener('click', function(){ selectReason(item.repairId, r, ch, chips, detWrap); });
+      chips.appendChild(ch);
+    });
+
+    /* detail textarea */
+    var detWrap = document.createElement('div');
+    detWrap.className = 'detail-wrap';
+    var ta = document.createElement('textarea');
+    ta.className = 'detail'; ta.rows = 2;
+    ta.placeholder = 'รายละเอียดเพิ่มเติม...';
+    ta.addEventListener('input', function(){
+      itemState[item.repairId].detail = ta.value.trim();
+    });
+    detWrap.appendChild(ta);
+
+    /* status ribbon */
+    var ribbon = document.createElement('div');
+    ribbon.className = 'status-ribbon';
+    ribbon.id = 'rib-' + item.repairId;
+
+    body.appendChild(chips);
+    body.appendChild(detWrap);
+    card.appendChild(head);
+    card.appendChild(body);
+    card.appendChild(ribbon);
+    sa.appendChild(card);
+  });
+
+  /* show UI */
+  document.getElementById('hdr').style.display = '';
+  document.getElementById('scrollArea').style.display = '';
+  document.getElementById('footer').style.display = '';
+  showScreen(null);
+  updateHeader();
+}
+
+function selectReason(repairId, rObj, clickedChip, chipsContainer, detWrap){
+  /* deselect all chips in this card */
+  chipsContainer.querySelectorAll('.chip').forEach(function(c){
+    c.classList.remove('sel-done','sel-other','sel-pick');
+  });
+  clickedChip.classList.add(rObj.cls);
+
+  var isOther = (rObj.val === '__other__');
+  if(isOther){
+    itemState[repairId].reason = '__other__';
+    detWrap.classList.add('show');
+    detWrap.querySelector('textarea').placeholder = 'ระบุเหตุผล...';
+    detWrap.querySelector('textarea').focus();
+  } else {
+    itemState[repairId].reason = rObj.val;
+    /* show detail for non-other only if already open */
+    detWrap.classList.add('show');
+    detWrap.querySelector('textarea').placeholder = 'รายละเอียดเพิ่มเติม (ถ้ามี)...';
+  }
+
+  /* card styling */
+  var card   = document.getElementById('card-' + repairId);
+  var ribbon = document.getElementById('rib-'  + repairId);
+  var isDone = (rObj.val.indexOf('Mark Completed') >= 0);
+  card.classList.toggle('done',   isDone);
+  card.classList.toggle('filled', !isDone && !isOther);
+  ribbon.classList.add('show');
+  if(isDone){
+    ribbon.classList.add('done'); ribbon.classList.remove('filled');
+    ribbon.textContent = '✅ Mark Completed เรียบร้อย';
+  } else if(!isOther){
+    ribbon.classList.add('filled'); ribbon.classList.remove('done');
+    ribbon.textContent = '📝 ' + rObj.lbl;
+  } else {
+    ribbon.classList.remove('done','filled'); ribbon.classList.remove('show');
+  }
+
+  updateHeader();
+}
+
+function updateHeader(){
+  var filled  = 0;
+  allItems.forEach(function(it){
+    var s = itemState[it.repairId];
+    if(s.reason && s.reason !== '__other__') filled++;
+    else if(s.reason === '__other__' && s.detail) filled++;
+  });
+  var total = allItems.length;
+  document.getElementById('hBranch').textContent = branchName;
+  document.getElementById('hProg').textContent   = 'ระบุแล้ว ' + filled + '/' + total + ' รายการ';
+  document.getElementById('progBar').style.width = Math.round(filled/total*100) + '%';
+  document.getElementById('btnSubmit').disabled  = (filled === 0);
+  document.getElementById('btnSubmit').textContent =
+    filled > 0 ? 'ส่ง ' + filled + ' รายการ' : 'ส่งทั้งหมด';
+}
+
+/* ── Submit ───────────────────────────────────────────────────── */
+function submitAll(){
+  var toSend = [];
+  allItems.forEach(function(it){
+    var s = itemState[it.repairId];
+    var reason = s.reason === '__other__' ? s.detail : s.reason;
+    if(!reason) return;                   // ยังไม่ได้ระบุ → ข้าม
+    toSend.push({
+      repairId: it.repairId,
+      product:  it.product || '',
+      reason:   reason,
+      action:   '',
+      detail:   s.reason !== '__other__' ? (s.detail || '') : '',
+    });
+  });
+  if(toSend.length === 0){ alert('กรุณาระบุเหตุผลอย่างน้อย 1 รายการ'); return; }
+
+  showOverlay(true);
+  var body = new URLSearchParams({
+    type   : 'repair_reasons_batch',
+    shipTo : shipTo,
+    items  : JSON.stringify(toSend),
+  });
+  fetch(GAS_URL, {method:'POST', body:body, redirect:'follow'})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      showOverlay(false);
+      if(d && d.status === 'ok'){
+        var markCount = toSend.filter(function(i){ return i.reason.indexOf('Mark Completed') >= 0; }).length;
+        var msg = 'บันทึก ' + toSend.length + ' รายการ';
+        if(markCount > 0) msg += '\nMark Completed: ' + markCount + ' รายการ';
+        if(toSend.length < allItems.length)
+          msg += '\n(ข้าม ' + (allItems.length - toSend.length) + ' รายการที่ไม่ได้ระบุ)';
+        document.getElementById('okMsg').innerText = branchName + '\n' + msg;
+        showScreen('scrOk');
+        document.getElementById('hdr').style.display = 'none';
+        document.getElementById('scrollArea').style.display = 'none';
+        document.getElementById('footer').style.display = 'none';
+      } else {
+        alert('⚠️ บันทึกไม่สำเร็จ: ' + (d && d.message ? d.message : 'Unknown'));
+      }
+    })
+    .catch(function(e){ showOverlay(false); alert('❌ เชื่อมต่อไม่ได้: ' + e.message); });
+}
+
+/* ── Helpers ──────────────────────────────────────────────────── */
+function showScreen(id){
+  ['scrLoad','scrEmpty','scrErr','scrOk'].forEach(function(s){
+    document.getElementById(s).classList.toggle('show', s === id);
+  });
+}
+function showErr(msg){
+  document.getElementById('errMsg').textContent = msg;
+  showScreen('scrErr');
+}
+function showOverlay(show){ document.getElementById('overlay').classList.toggle('show', show); }
+function esc(t){ var d=document.createElement('div'); d.textContent=t; return d.innerHTML; }
+</script>
+</body>
+</html>
